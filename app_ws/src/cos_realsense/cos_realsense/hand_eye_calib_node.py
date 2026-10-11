@@ -205,6 +205,19 @@ class HandEyeCalibNode:
         self.img_sub = n.create_subscription(
             Image, self.image_topic, self._on_image, qos_profile_sensor_data)
 
+        # 服务接口: 供自动标定脚本/CLI 远程驱动(等价于键盘空格/r/d)
+        from std_srvs.srv import Trigger
+        def _wrap(fn):
+            def _cb(req, res):
+                ok, msg = fn()
+                res.success = ok
+                res.message = msg
+                return res
+            return _cb
+        n.create_service(Trigger, '~/sample', _wrap(self.take_sample))
+        n.create_service(Trigger, '~/solve', _wrap(self.solve))
+        n.create_service(Trigger, '~/drop_last', _wrap(self.drop_last))
+
         n.get_logger().info(
             f'\n===== 眼在手上手眼标定 =====\n'
             f'  图像: {self.image_topic}   棋盘格内角点: {gx}x{gy} (格子 {gx+1}x{gy+1})\n'
@@ -272,40 +285,49 @@ class HandEyeCalibNode:
     def take_sample(self):
         log = self.node.get_logger().info
         if self.K is None:
-            log('还没有 camera_info, 检查相机节点是否已启动')
-            return
+            msg = '还没有 camera_info, 检查相机节点是否已启动'
+            log(msg)
+            return False, msg
         if self.latest is None:
-            log(f'还没有图像, 检查 {self.image_topic} 是否有数据 (ros2 topic hz)')
-            return
+            msg = f'还没有图像, 检查 {self.image_topic} 是否有数据 (ros2 topic hz)'
+            log(msg)
+            return False, msg
         bgr, frame_id, _ = self.latest
         det = detect_board(bgr, self.pattern, self.objp, self.K, self.D)
         if det is None:
-            log(f'未检测到 {self.pattern[0]}x{self.pattern[1]} 内角点棋盘格, '
-                f'调整位姿/光照后重试(格子数填错会一直检测不到)')
-            return
+            msg = (f'未检测到 {self.pattern[0]}x{self.pattern[1]} 内角点棋盘格, '
+                   f'调整位姿/光照后重试(格子数填错会一直检测不到)')
+            log(msg)
+            return False, msg
         R_cb, t_cb, _ = det
         try:
             T_base_end = self._lookup_T(self.base_frame, self.end_frame)
         except Exception as e:
-            log(f'TF 查询失败 {self.base_frame}->{self.end_frame}: {e} (机械臂栈在跑吗?)')
-            return
+            msg = f'TF 查询失败 {self.base_frame}->{self.end_frame}: {e} (机械臂栈在跑吗?)'
+            log(msg)
+            return False, msg
         if self.samples:
             last = self.samples[-1]['T_base_end']
             dtrans = np.linalg.norm(T_base_end[:3, 3] - last[:3, 3])
             drot = rot_angle(last[:3, :3].T @ T_base_end[:3, :3])
             if dtrans < self.min_trans and drot < self.min_rot:
-                log(f'位姿变化太小(平移 {dtrans*1000:.0f}mm / 旋转 {drot:.1f}deg), '
-                    f'换个位姿再采')
-                return
+                msg = (f'位姿变化太小(平移 {dtrans*1000:.0f}mm / 旋转 {drot:.1f}deg), '
+                       f'换个位姿再采')
+                log(msg)
+                return False, msg
         self.samples.append({'T_base_end': T_base_end, 'R_cam_board': R_cb,
                              't_cam_board': t_cb, 'image_frame': frame_id})
         dist = np.linalg.norm(t_cb)
-        log(f'样本 #{len(self.samples)} 已采集 (板距相机 {dist:.2f} m)')
+        msg = f'样本 #{len(self.samples)} 已采集 (板距相机 {dist:.2f} m)'
+        log(msg)
+        return True, msg
 
     def drop_last(self):
         if self.samples:
             self.samples.pop()
-            self.node.get_logger().info(f'已删除上一组, 剩 {len(self.samples)} 组')
+        msg = f'已删除上一组, 剩 {len(self.samples)} 组'
+        self.node.get_logger().info(msg)
+        return True, msg
 
     def status(self):
         self.node.get_logger().info(
@@ -315,11 +337,39 @@ class HandEyeCalibNode:
     def solve(self):
         log = self.node.get_logger().info
         if len(self.samples) < 4:
-            log(f'样本不足({len(self.samples)}/4+), 继续采样')
-            return
+            msg = f'样本不足({len(self.samples)}/4+), 继续采样'
+            log(msg)
+            return False, msg
         if len(self.samples) < 8:
             log(f'警告: 只有 {len(self.samples)} 组样本, 建议 12 组以上')
-        T_end_cam, spread_mm, rot_dev = solve_handeye(self.samples)
+        # 迭代剔除离群样本: 用当前解反推每组样本的板位姿, 偏差显著大于中位数的
+        # 判为离群(画面边缘角点系统偏差/采样时机械未静止), 剔除后重解
+        samples = list(self.samples)
+        dropped = 0
+        for _ in range(3):
+            T_end_cam, spread_mm, rot_dev = solve_handeye(samples)
+            if len(samples) <= 6:
+                break
+            boards = [s['T_base_end'] @ T_end_cam @
+                      make_T(s['R_cam_board'], s['t_cam_board']) for s in samples]
+            M = sum(B[:3, :3] for B in boards) / len(boards)
+            U, _, Vt = np.linalg.svd(M)
+            Rm = U @ Vt
+            if np.linalg.det(Rm) < 0:
+                U[:, -1] *= -1
+                Rm = U @ Vt
+            devs = [rot_angle(Rm.T @ B[:3, :3]) for B in boards]
+            worst = int(np.argmax(devs))
+            med = float(np.median(devs))
+            if devs[worst] > max(1.0, 2.0 * med):
+                log(f'剔除离群样本(旋转偏差 {devs[worst]:.2f} deg, 中位数 {med:.2f} deg)')
+                samples.pop(worst)
+                dropped += 1
+            else:
+                break
+        if dropped:
+            log(f'共剔除 {dropped} 组离群样本, 最终用 {len(samples)} 组重解')
+            T_end_cam, spread_mm, rot_dev = solve_handeye(samples)
 
         # optical frame -> camera_link: 借 realsense 驱动发布的静态 TF
         frame_id = self.samples[-1]['image_frame']
@@ -337,7 +387,7 @@ class HandEyeCalibNode:
         r, p, y = rot_to_rpy(T_end_link[:3, :3])
         q = rot_to_quat(T_end_link[:3, :3])
         report = (
-            f'\n================ 标定结果 ({len(self.samples)} 组样本, Tsai, 光学系来自{src}) ================\n'
+            f'\n================ 标定结果 ({len(samples)} 组样本(剔除离群 {dropped} 组), Tsai, 光学系来自{src}) ================\n'
             f'一致性: 板位姿平移离散 {spread_mm:.1f} mm, 旋转离散 {rot_dev:.2f} deg '
             f'{"(良好)" if spread_mm < 5 and rot_dev < 1 else "(偏大, 建议补样本重解)"}\n'
             f'elfin_end_link -> camera_link:\n'
@@ -362,13 +412,19 @@ class HandEyeCalibNode:
                 'mount_xyz': [float(v) for v in xyz],
                 'mount_rpy': [float(r), float(p), float(y)],
                 'quaternion_xyzw': [float(v) for v in q],
-                'samples': len(self.samples),
+                'samples': len(samples),
+                'outliers_dropped': dropped,
                 'pattern_inner_corners': list(self.pattern),
                 'square_size_m': self.square_size,
                 'consistency': {'trans_spread_mm': spread_mm, 'rot_dev_deg': rot_dev},
                 'T_end_camera_link_4x4': T_end_link.tolist(),
+                'samples_raw': [{
+                    'T_base_end': s['T_base_end'].tolist(),
+                    'T_cam_board': make_T(s['R_cam_board'], s['t_cam_board']).tolist(),
+                } for s in samples],
             }, f, allow_unicode=True)
         log(f'结果已保存: {path}')
+        return True, report + f'\n结果已保存: {path}'
 
     def run(self):
         n = self.node

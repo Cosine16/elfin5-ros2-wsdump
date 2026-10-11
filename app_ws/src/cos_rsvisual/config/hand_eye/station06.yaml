@@ -1,0 +1,22 @@
+# station06 手眼标定产物 (眼在手上 D435i -> elfin_end_link)
+#
+# 标定日期: 2026-10-11
+# 方法: 棋盘格(9x9格, 格边 18mm 实测) AX=XB(Tsai, 10组样本, 剔除离群1组)
+#       + 桌面点云平面法向约束修正旋转(修正前倾斜 5.6~6.2deg)
+# 验证: 桌面点云倾斜 0.42deg, 平面 RMS 3.4mm
+# 原始数据: ~/.ros/hand_eye_calib/hand_eye_20261011_193559.yaml (+_cloudcorr.yaml)
+# 工具: cos_realsense/hand_eye_calib_node + scripts/auto_hand_eye_calib.py
+#       + scripts/cloud_tilt_correct.py
+#
+# 注意: 本文件只适用于 06 工位的主机 + 该台 D435i + 当前支架。
+#       相机拆装/支架松动/更换机器后必须重新标定。
+station: "06"
+camera:
+  model: "Intel RealSense D435i"
+  serial: "261222074942"
+robot:
+  model: "Elfin5"
+  parent_frame: "elfin_end_link"
+  child_frame: "camera_link"
+mount_xyz: "-0.023016 -0.005317 0.029714"
+mount_rpy: "-3.001818 -1.533699 0.182045"

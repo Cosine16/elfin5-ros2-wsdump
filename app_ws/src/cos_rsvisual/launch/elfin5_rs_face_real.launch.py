@@ -29,6 +29,7 @@
 # 若 rs-enumerate-devices 显示协商到 USB3, 可提高到 640x480x30。
 
 import os
+import sys
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -65,15 +66,21 @@ def load_yaml(package_name, file_path):
 def generate_launch_description():
 
     # ***** LAUNCH ARGUMENTS ***** #
-    # 眼在手上外参(真机手眼标定结果, 初装后可用默认值先用着再标定)
+    # 工位标定产物: 优先用 station 指定 config/hand_eye/station<N>.yaml
+    # (按工位独立维护, 见该目录 yaml 头注释); 不给 station 时才回退到
+    # mount_xyz/mount_rpy 参数(名义值, 仅供调通链路, 别用于正式作业)。
+    declare_station_cmd = DeclareLaunchArgument(
+        name='station',
+        default_value='',
+        description='工位编号(如 06), 加载 config/hand_eye/station<N>.yaml 标定外参')
     declare_mount_xyz_cmd = DeclareLaunchArgument(
         name='mount_xyz',
         default_value='0 0 0.02',
-        description='D435i camera mount position on elfin_end_link (hand-eye calibration)')
+        description='D435i mount position (station 未指定时的名义回退值)')
     declare_mount_rpy_cmd = DeclareLaunchArgument(
         name='mount_rpy',
         default_value='0 0 0',
-        description='D435i camera mount orientation on elfin_end_link (hand-eye calibration)')
+        description='D435i mount orientation (station 未指定时的名义回退值)')
     declare_enable_follow_cmd = DeclareLaunchArgument(
         name='enable_follow',
         default_value='True',
@@ -110,15 +117,6 @@ def generate_launch_description():
         get_package_share_directory('cos_rsvisual'),
         'urdf',
         'elfin5_rs_d435i.urdf.xacro')
-    robot_description_config = Command(
-        [FindExecutable(name='xacro'), ' ', xacro_file,
-         ' use_fake_hardware:=false',
-         ' use_real_hardware:=true',
-         ' mount_xyz:="', LaunchConfiguration('mount_xyz'), '"',
-         ' mount_rpy:="', LaunchConfiguration('mount_rpy'), '"'])
-    # foxy 会对字符串参数尝试 yaml 解析, 必须显式声明为纯字符串
-    robot_description = {'robot_description': ParameterValue(
-        robot_description_config, value_type=str)}
 
     # MoveGroupInterface 还需要 SRDF(规划组 elfin_arm 定义)和运动学配置,
     # 缺了会报 "Group 'elfin_arm' was not found"(实测)
@@ -140,8 +138,33 @@ def generate_launch_description():
         return data[section]['ros__parameters']
 
     def _make_camera_tf_and_container(context):
-        xyz = LaunchConfiguration('mount_xyz').perform(context).split()
-        rpy = LaunchConfiguration('mount_rpy').perform(context).split()
+        station = LaunchConfiguration('station').perform(context)
+        if station:
+            cfg_path = os.path.join(
+                get_package_share_directory('cos_rsvisual'),
+                'config', 'hand_eye', f'station{station}.yaml')
+            with open(cfg_path) as f:
+                cfg = yaml.safe_load(f)
+            xyz_s, rpy_s = cfg['mount_xyz'], cfg['mount_rpy']
+            print(f'[elfin5_rs_face_real] 工位 {station} 标定外参: '
+                  f'mount_xyz="{xyz_s}" mount_rpy="{rpy_s}" '
+                  f'(相机SN {cfg["camera"]["serial"]})', file=sys.stderr)
+        else:
+            xyz_s = LaunchConfiguration('mount_xyz').perform(context)
+            rpy_s = LaunchConfiguration('mount_rpy').perform(context)
+            print('[elfin5_rs_face_real] 警告: 未指定 station, 使用名义外参'
+                  '(未标定, 仅供调通链路)', file=sys.stderr)
+        xyz = xyz_s.split()
+        rpy = rpy_s.split()
+        robot_description_config = Command(
+            [FindExecutable(name='xacro'), ' ', xacro_file,
+             ' use_fake_hardware:=false',
+             ' use_real_hardware:=true',
+             f' mount_xyz:="{xyz_s}"',
+             f' mount_rpy:="{rpy_s}"'])
+        # foxy 会对字符串参数尝试 yaml 解析, 必须显式声明为纯字符串
+        robot_description = {'robot_description': ParameterValue(
+            robot_description_config, value_type=str)}
         camera_tf = Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -182,6 +205,7 @@ def generate_launch_description():
     camera_tf_and_container = OpaqueFunction(function=_make_camera_tf_and_container)
 
     return LaunchDescription([
+        declare_station_cmd,
         declare_mount_xyz_cmd,
         declare_mount_rpy_cmd,
         declare_enable_follow_cmd,

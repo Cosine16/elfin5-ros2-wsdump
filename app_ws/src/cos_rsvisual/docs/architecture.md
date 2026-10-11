@@ -111,6 +111,9 @@ world ──(固定)──> elfin_base_link ──> elfin_base ──> elfin_lin
 - 真机需做眼在手上标定，结果填入 launch 参数 `mount_xyz` / `mount_rpy`。
   标定工具：`cos_realsense` 的 `hand_eye_calib_node`（棋盘格 AX=XB 自研实现，
   用法见该文件头注释；也可用 easy_handeye2）。
+  标定产物**按工位独立维护**：`config/hand_eye/station<N>.yaml`（含日期/样本数/
+  一致性/相机序列号等审计信息），launch 时用 `station:=06` 加载；
+  不指定 `station` 时回退名义值（仅供调通链路，勿用于正式作业）。
 - **真机人脸跟随链路的 TF 略有不同**：硬件栈的 robot_state_publisher 用
   官方 URDF（无相机），`elfin_end_link → camera_link` 由
   `elfin5_rs_face_real.launch.py` 的 static_transform_publisher 发布，
