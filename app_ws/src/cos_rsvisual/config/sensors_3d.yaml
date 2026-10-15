@@ -1,14 +1,16 @@
 # =============================================================================
 # cos_rsvisual/config/sensors_3d.yaml
-# 【注意: 本文件在当前 Foxy 环境下不会被加载】
-# Foxy 的 MoveIt deb (2.2.3) 未编译 PointCloudOctomapUpdater 插件(foxy 分支
-# occupancy_map_monitor/CMakeLists.txt 不含 updater), 注入本配置只会报
-# "plugin ... does not exist"。当前障碍物感知由 obstacle_updater 组件实现
-# (/person_pose -> /planning_scene collision object)。本文件保留供升级到
-# Humble+ 后启用 octomap 点云方案使用, 届时把它加回 move_group 参数即可。
+# MoveIt move_group 的 octomap 点云更新配置(Humble MoveIt 2.5+ 生效)。
 #
-# MoveIt2 point_cloud_octomap_updater 配置(foxy MSA 惯例: 顶层字段,
-# 不带 ros__parameters 包装, 用 yaml.safe_load 读成 dict 整体注入)。
+# 前置: ros-humble-moveit-ros-perception (PointCloudOctomapUpdater 插件所在包)
+#
+# 注入位置(两边都用 load_yaml 读本文件, 平铺格式, 不带 ros__parameters 包装):
+#   真机: elfin5_ros2_moveit2/launch/elfin5_moveit_rviz.launch.py
+#   仿真: cos_rsvisual/launch/elfin5_rs_sim.launch.py
+#         (仿真 move_group 把点云话题 remap 到 gazebo 插件的 /camera/points)
+#
+# 真机点云话题 /camera/depth/color/points 来自 realsense2_camera
+# (4.5x, camera_namespace=camera), 需 pointcloud.enable:=true 才有数据。
 # =============================================================================
 
 # 传感器列表
@@ -16,7 +18,7 @@ sensors: ["realsense_depth"]
 
 realsense_depth:
   sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
-  point_cloud_topic: /camera/points
+  point_cloud_topic: /camera/depth/color/points
   max_range: 3.0
   point_subsample: 1
   padding_offset: 0.05

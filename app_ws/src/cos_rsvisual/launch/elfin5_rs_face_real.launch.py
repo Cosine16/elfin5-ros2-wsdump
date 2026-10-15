@@ -13,9 +13,9 @@
 # 本 launch 启动:
 #   1. realsense2_camera: 彩色 640x480@15 + 深度对齐到彩色(align_depth),
 #      发布相机自身 TF (camera_link -> *_optical_frame);
-#   2. static_transform_publisher: elfin_end_link -> camera_link
-#      (眼在手上外参 mount_xyz/mount_rpy, 手眼标定后改这两个 launch 参数),
-#      把相机 TF 树挂到机械臂 TF 树上;
+#   2. (elfin_end_link -> camera_link 的眼在手上外参不在此发布:
+#      硬件栈 elfin5_moveit.launch.py 的 robot_state_publisher 从带相机 URDF
+#      发布, 外参同样来自 config/hand_eye/station<N>.yaml);
 #   3. vision_container 组件容器:
 #      - FaceVisualDetector: 彩色图 Haar 人脸检测 + 对齐深度取距 -> /face_pose
 #      - ArmFollower(节点名 face_follower): 订阅 /face_pose,
@@ -33,7 +33,7 @@ import sys
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch_ros.actions import Node, ComposableNodeContainer
+from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 from launch_ros.parameter_descriptions import ParameterValue
 from launch.actions import (
@@ -85,6 +85,11 @@ def generate_launch_description():
         name='enable_follow',
         default_value='True',
         description='ArmFollower 跟随总开关(也可运行时 ros2 param set 切换)')
+    declare_enable_pointcloud_cmd = DeclareLaunchArgument(
+        name='enable_pointcloud',
+        default_value='False',
+        description='开点云(/camera/depth/color/points, 供 octomap 避障/建图; '
+                    '跟随本身不需要, 关了省 USB 带宽)')
 
     # *********************** RealSense *********************** #
     # 4.51+ (ros2 分支) 参数名; 若用 3.2.3 旧版驱动, 对应参数见
@@ -99,8 +104,9 @@ def generate_launch_description():
             'enable_color': 'true',
             # 深度对齐到彩色: 人脸框小, 非对齐深度的像素错位会毁掉框内取距
             'align_depth.enable': 'true',
-            # 跟随不依赖点云, 关掉省 USB 带宽
-            'pointcloud.enable': 'false',
+            # 跟随不依赖点云, 默认关掉省 USB 带宽;
+            # octomap 避障/建图时 enable_pointcloud:=true 打开
+            'pointcloud.enable': LaunchConfiguration('enable_pointcloud'),
         }.items(),
     )
 
@@ -110,9 +116,9 @@ def generate_launch_description():
 
     # robot_description(含相机 link)注入跟随器:
     # 其内置 MoveGroupInterface 需要它构造 RobotModel(规划组/关节名)。
-    # 注意与硬件栈 elfin5_moveit.launch.py 的 URDF 不同源: 那份不含相机。
-    # 本 launch 不再起 robot_state_publisher(硬件栈已发布关节 TF),
-    # 相机 TF 由 static_transform_publisher + realsense 驱动补足。
+    # 硬件栈 elfin5_moveit.launch.py 的 robot_state_publisher 也按同源
+    # station<N>.yaml 发布了 elfin_end_link -> camera_link(关节 TF 由它发),
+    # 相机光学帧 TF 由 realsense 驱动补足。
     xacro_file = os.path.join(
         get_package_share_directory('cos_rsvisual'),
         'urdf',
@@ -125,8 +131,8 @@ def generate_launch_description():
     robot_description_kinematics = {'robot_description_kinematics': load_yaml(
         'elfin5_ros2_moveit2', 'config/kinematics.yaml')}
 
-    # mount_xyz/mount_rpy 是 "x y z" / "r p y" 字符串, static_transform_publisher
-    # 需要拆成独立参数, 用 OpaqueFunction 在运行时解析组装
+    # mount_xyz/mount_rpy 是 "x y z" / "r p y" 字符串, 用 OpaqueFunction
+    # 在运行时解析组装进 xacro
     #
     # 注意: foxy 的 launch_ros 把传给 ComposableNode 的 yaml 文件整体扁平化成
     # "节点名.ros__parameters.参数名" 的参数列表发给容器, rclcpp 不做分节匹配,
@@ -165,14 +171,9 @@ def generate_launch_description():
         # foxy 会对字符串参数尝试 yaml 解析, 必须显式声明为纯字符串
         robot_description = {'robot_description': ParameterValue(
             robot_description_config, value_type=str)}
-        camera_tf = Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='camera_mount_tf',
-            output='log',
-            arguments=xyz + rpy + ['elfin_end_link', 'camera_link'],
-            parameters=[{'use_sim_time': False}],
-        )
+        # 注意: elfin_end_link -> camera_link 不再由本 launch 发静态 TF,
+        # 改由硬件栈 robot_state_publisher 从带相机的 URDF 发布
+        # (elfin5_moveit.launch.py 的 station 参数, 与本 launch 同源 station<N>.yaml)。
         detector = ComposableNode(
             package='cos_rsvisual',
             plugin='cos_rsvisual::FaceVisualDetector',
@@ -200,7 +201,7 @@ def generate_launch_description():
             composable_node_descriptions=[detector, follower],
             output='screen',
         )
-        return [camera_tf, container]
+        return [container]
 
     camera_tf_and_container = OpaqueFunction(function=_make_camera_tf_and_container)
 
@@ -209,6 +210,7 @@ def generate_launch_description():
         declare_mount_xyz_cmd,
         declare_mount_rpy_cmd,
         declare_enable_follow_cmd,
+        declare_enable_pointcloud_cmd,
 
         # 禁用 FastDDS 共享内存传输(残留 shm 段会导致发现/订阅随机失效);
         # 建议同时 export ROS_LOCALHOST_ONLY=1(与 start_real.py 一致)

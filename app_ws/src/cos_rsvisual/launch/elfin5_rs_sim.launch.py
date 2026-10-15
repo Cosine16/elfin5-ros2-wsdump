@@ -211,17 +211,20 @@ def generate_launch_description():
         "publish_transforms_updates": True,
     }
 
-    # 注意: 不再向 move_group 注入 sensors_3d.yaml —— Foxy 的 MoveIt deb (2.2.3)
-    # 没有编译 PointCloudOctomapUpdater 插件(foxy 分支 occupancy_map_monitor 的
-    # CMakeLists 里就不含 updater), 注入只会报 plugin 加载失败。障碍物感知改由
-    # obstacle_updater 组件把 /person_pose 以 collision object 形式写进规划场景。
-    # sensors_3d.yaml 保留在 config/ 中, 供升级 Humble+ 后启用 octomap 方案。
+    # OctoMap 点云避障: 注入 cos_rsvisual/config/sensors_3d.yaml
+    # (PointCloudOctomapUpdater, 需 ros-humble-moveit-ros-perception)。
+    # yaml 里的点云话题按真机 realsense2_camera 写(/camera/depth/color/points),
+    # 仿真 gazebo 插件发在 /camera/points, 用 remap 对齐。
+    sensors_3d_yaml = load_yaml(
+        "cos_rsvisual", "config/sensors_3d.yaml"
+    )
 
     # START NODE -> MOVE GROUP:
     run_move_group_node = Node(
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
+        remappings=[("/camera/depth/color/points", "/camera/points")],
         parameters=[
             robot_description,
             robot_description_semantic,
@@ -231,7 +234,7 @@ def generate_launch_description():
             moveit_controllers,
             planning_scene_monitor_parameters,
             {'use_sim_time': use_sim_time},
-        ],
+        ] + ([sensors_3d_yaml] if sensors_3d_yaml else []),
     )
 
     # RVIZ: 本包配置(含 PointCloud2 + PersonPose display)
