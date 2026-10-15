@@ -4,4 +4,4 @@
 # 这样 clangd 能自动解析出 rclcpp / moveit 等所有 include 路径与编译选项。
 # 自研包(cos_shape / cos_rsvisual)已移至 app_ws/,由 app_ws/.clangd 单独覆盖。
 CompileFlags:
-  CompilationDatabase: /home/fit/cos_ws/elfin_ws/build
+  CompilationDatabase: elfin_ws/build

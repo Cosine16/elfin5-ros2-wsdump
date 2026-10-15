@@ -19,5 +19,10 @@ source /opt/ros/humble/setup.bash
 cd "$WS"
 
 echo "=== 开始构建: $(date) ==="
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+echo "=== 构建结束: $(date) exit=$? ==="
+
+# 合并各包的 compile_commands.json 供 clangd 使用(见仓库根目录 .clangd)
+python3 -c "import json,glob; m=[]; [m.extend(json.load(open(p))) for p in glob.glob('$WS/build/*/compile_commands.json')]; json.dump(m, open('$WS/build/compile_commands.json','w'), indent=1)"
+echo "=== 已合并 compile_commands.json ==="
 echo "=== 构建结束: $(date) exit=$? ==="
