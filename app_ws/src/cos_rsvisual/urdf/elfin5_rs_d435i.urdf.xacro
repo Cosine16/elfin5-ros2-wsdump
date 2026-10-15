@@ -8,13 +8,19 @@
   末尾追加了 RealSense D435i 相机模型(link/joint + gazebo 深度相机插件)。
   上游(elfin5_ros2_gazebo)URDF 若有变更,需手动同步本文件的拷贝部分。
 
-  与原版差异:
-    1) 末尾追加 camera_link / camera_depth_frame / camera_depth_optical_frame
-       及 camera_mount_joint(眼在手上外参入口)。
-    2) 末尾追加 gazebo 深度相机插件(libgazebo_ros_camera.so, type="depth")。
-    3) 新增 xacro arg: mount_xyz / mount_rpy(手眼标定外参)。
+  注意, 本文件同时服务两条链路, 改动需谨慎:
+    - 仿真: cos_rsvisual/launch/elfin5_rs_sim.launch.py
+      (use_real_hardware:=false, 含光学帧 + gazebo 插件)
+    - 真机: elfin5_ros2_moveit2 的三个 launch(moveit/moveit_rviz/basic_api)
+      (use_real_hardware:=true, 只有 camera_link, 光学帧由 realsense 驱动发布)
 
-  仿真 launch 中务必传: use_real_hardware:=false use_fake_hardware:=false
+  与原版差异
+    1) 末尾追加 camera_link 及 camera_mount_joint(眼在手上外参入口)。
+    2) 仿真分支追加 camera_depth_frame / camera_depth_optical_frame
+       和 gazebo 深度相机插件(libgazebo_ros_camera.so, type=depth)。
+    3) 新增 xacro arg mount_xyz / mount_rpy(手眼标定外参)。
+
+  仿真 launch 中务必传 use_real_hardware:=false use_fake_hardware:=false
   =============================================================================
 -->
 
@@ -520,6 +526,11 @@
     <child link="camera_link" />
   </joint>
 
+  <!-- 以下光学帧与 gazebo 插件仅供仿真: 真机的 camera_depth_frame /
+       camera_depth_optical_frame 等由 realsense 驱动发布(publish_tf),
+       URDF 再定义会 TF 双发、值不同还会闪烁。 -->
+  <xacro:unless value="$(arg use_real_hardware)">
+
   <!-- 深度帧(物理帧) -->
   <link name="camera_depth_frame"/>
   <joint name="camera_depth_joint" type="fixed">
@@ -574,5 +585,7 @@
       </plugin>
     </sensor>
   </gazebo>
+
+  </xacro:unless>
 
 </robot>

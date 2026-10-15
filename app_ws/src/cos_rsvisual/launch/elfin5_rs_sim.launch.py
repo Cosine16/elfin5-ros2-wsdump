@@ -87,16 +87,26 @@ def generate_launch_description():
     # ***** ROBOT DESCRIPTION ***** #
     # 本包的 elfin5 + D435i xacro (gazebo 仿真: 两个 hardware arg 都置 false)。
     # 用 Command 在运行时展开, 使 mount_xyz / mount_rpy launch 参数生效。
+    #
+    # 注意: gazebo_ros2_control 会把 robot_description 拼成
+    # "--param robot_description:=<xml>" 交给 rcl 解析, 值按 YAML 处理;
+    # XML 注释里含 ": "(冒号+空格)会被当成 mapping 导致解析失败,
+    # 控制器全部起不来(实测 gzserver 报 parser error)。
+    # 因此 xacro 输出经 bash 管道先剥掉 XML 注释(注释无语义, 剥除安全)。
     xacro_file = os.path.join(
         get_package_share_directory('cos_rsvisual'),
         'urdf',
         'elfin5_rs_d435i.urdf.xacro')
-    robot_description_config = Command(
-        [FindExecutable(name='xacro'), ' ', xacro_file,
-         ' use_fake_hardware:=false',
-         ' use_real_hardware:=false',
-         ' mount_xyz:="', LaunchConfiguration('mount_xyz'), '"',
-         ' mount_rpy:="', LaunchConfiguration('mount_rpy'), '"'])
+    robot_description_config = Command([
+        FindExecutable(name='bash'), ' -c "',
+        FindExecutable(name='xacro'), ' ', xacro_file,
+        ' use_fake_hardware:=false use_real_hardware:=false',
+        ' \\"mount_xyz:=', LaunchConfiguration('mount_xyz'), '\\"',
+        ' \\"mount_rpy:=', LaunchConfiguration('mount_rpy'), '\\"',
+        " | python3 -c 'import sys,re;"
+        "sys.stdout.write(re.sub(r\\\"<!--.*?-->\\\",\\\"\\\","
+        "sys.stdin.read(),flags=re.S))'",
+        '"'])
     # foxy 会对字符串参数尝试 yaml 解析, URDF 里的注释冒号会触发解析错误,
     # 必须用 ParameterValue(..., value_type=str) 显式声明为纯字符串
     robot_description = {'robot_description': ParameterValue(
@@ -136,11 +146,11 @@ def generate_launch_description():
     load_controllers = []
     for controller in [
         "elfin_arm_controller",
-        "joint_state_controller",
+        "joint_state_broadcaster",
     ]:
         load_controllers += [
             ExecuteProcess(
-                cmd=["ros2 run controller_manager spawner.py {}".format(controller)],
+                cmd=["ros2 run controller_manager spawner {}".format(controller)],
                 shell=True,
                 output="screen",
             )
