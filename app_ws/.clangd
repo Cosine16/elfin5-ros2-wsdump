@@ -4,4 +4,4 @@
 # 合并命令(在 app_ws/ 下执行,与 .vscode/tasks.json 中 elfin_ws 的做法相同):
 #   python3 -c "import json,glob; m=[]; [m.extend(json.load(open(p))) for p in glob.glob('build/*/compile_commands.json')]; json.dump(m, open('build/compile_commands.json','w'), indent=1)"
 CompileFlags:
-  CompilationDatabase: /home/fit/cos_ws/app_ws/build
+  CompilationDatabase: build
