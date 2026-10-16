@@ -2,6 +2,6 @@
 # 由 elfin_ws/build/*/compile_commands.json 合并生成,覆盖厂家驱动层的 C++ 包
 # (elfin_basic_api / elfin_ethercat_driver / soem_ros2 / elfin_ros_control 等),
 # 这样 clangd 能自动解析出 rclcpp / moveit 等所有 include 路径与编译选项。
-# 自研包(cos_shape / cos_rsvisual)已移至 app_ws/,由 app_ws/.clangd 单独覆盖。
+# 自研包(cos_shape)已移至 app_ws/,由 app_ws/.clangd 单独覆盖。
 CompileFlags:
   CompilationDatabase: elfin_ws/build

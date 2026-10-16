@@ -35,4 +35,3 @@ document/HuayanRobot_Library_Python_V1.1.1.1.pdf
 # ---- RealSense 运行时生成的输出（heightmap 等） ----
 realsense_ws/generated/
 realsense_ws/generated_real/
-app_ws/src/cos_realsense/rviz/pointcloud.rviz
