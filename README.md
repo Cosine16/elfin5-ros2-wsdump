@@ -5,7 +5,7 @@
 
 ## 运行环境
 
-- 主机：Ubuntu20.04 + ros2 foxy
+- 主机：Ubuntu22.04 + ros2 humble
 
 ## 目录结构
 采用包集合来源作为目录结构分类依据
@@ -13,14 +13,14 @@
 
 ```sh
 .
-├── app_ws  //项目的源码
+├── app_ws  //基于厂家开发ros2包进行的应用层开发
 │   ├── build_all.sh
 │   └── src
 │       └── cos_shape //画图形
 ├── document
 ├── elfin_ws  //elfin-robotics 华沿官方提供的ros2包
 │   └── src
-│       ├── elfin_demo  //示例
+│       ├── elfin_demo  //厂家的一些python结点示例
 │       └── elfin_robot //驱动包（机械臂驱动的底座）
 ├── README.md
 ├── scripts
@@ -82,7 +82,5 @@ ros2 launch elfin_basic_api fake_elfin_gui.launch.py      # Control Panel（仿�
 
 ## 说明
 
-- `windows_sdk/` 在 Windows 主机上用 MinGW 编译运行，通过 TCP（`192.168.10.10:10003`）
+- `windows_sdk/` 在 Windows 主机上选择使用MSVC、Mingw、GCC 编译运行，通过 v6 TCP
   直连控制柜，不经过 ROS，也不要放进 colcon 工作空间。
-- 容器内没有 gnome-terminal，`start_sim.sh` 会自动切换为后台进程模式；
-  在带桌面环境的 Linux 上运行则自动打开多个终端窗口。
