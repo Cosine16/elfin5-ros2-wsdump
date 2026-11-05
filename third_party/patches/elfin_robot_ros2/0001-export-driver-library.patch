@@ -1,0 +1,77 @@
+diff --git a/elfin_ethercat_driver/CMakeLists.txt b/elfin_ethercat_driver/CMakeLists.txt
+--- a/elfin_ethercat_driver/CMakeLists.txt
++++ b/elfin_ethercat_driver/CMakeLists.txt
+@@ -21,7 +21,7 @@
+ 
+ set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+ 
+-set(CMAKE_INSTALL_RPATH "${PROJECT_BINARY_DIR}")
++set(CMAKE_INSTALL_RPATH "$ORIGIN;$ORIGIN/..")
+ 
+ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+ 
+@@ -115,4 +115,15 @@
+     share/${PROJECT_NAME}
+ )
+ 
++# Export the shared driver through its installed package prefix.
++# Consumers must not depend on this package's source/build directory layout.
++install(TARGETS ${PROJECT_NAME}_lib
++  LIBRARY DESTINATION lib
++  ARCHIVE DESTINATION lib
++  RUNTIME DESTINATION bin
++)
++ament_export_include_directories(include)
++ament_export_libraries(${PROJECT_NAME}_lib)
++ament_export_dependencies(${DEPENDENCIES})
++
+ ament_package()
+diff --git a/elfin_ros_control/CMakeLists.txt b/elfin_ros_control/CMakeLists.txt
+--- a/elfin_ros_control/CMakeLists.txt
++++ b/elfin_ros_control/CMakeLists.txt
+@@ -19,7 +19,7 @@
+ 
+ set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+ 
+-set(CMAKE_INSTALL_RPATH "${PROJECT_BINARY_DIR}/../elfin_ethercat_driver")
++set(CMAKE_INSTALL_RPATH "$ORIGIN;$ORIGIN/..")
+ 
+ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+ 
+@@ -40,15 +40,13 @@
+ find_package(std_srvs REQUIRED)
+ find_package(tf2 REQUIRED)
+ find_package(hardware_interface REQUIRED)
+-find_package(elfin_ethercat_driver)
++find_package(elfin_ethercat_driver REQUIRED)
+ find_package(pluginlib REQUIRED REQUIRED)
+ find_package(controller_interface REQUIRED)
+ find_package(rosidl_default_generators REQUIRED)
+ 
+ include_directories(
+   include
+-  ../../../install/elfin_ethercat_driver/include
+-  ../../../install/elfin_robot_msgs/include
+ )
+ 
+ set(DEPENDENCIES
+@@ -69,7 +67,6 @@
+   "rosidl_default_generators"
+ )
+ 
+-LINK_DIRECTORIES(../../../build/elfin_ethercat_driver/)
+ 
+ add_library(elfin_hardware_interface
+         SHARED
+@@ -77,10 +74,7 @@
+         src/elfin_hardware_onlyposition_interface.cpp
+         )
+ 
+-target_link_libraries(
+-	elfin_hardware_interface
+-	libelfin_ethercat_driver_lib.so
+-)
++# elfin_ethercat_driver exports its installed library via ament_target_dependencies.
+ target_include_directories(
+         elfin_hardware_interface
+         PRIVATE

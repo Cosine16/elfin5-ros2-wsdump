@@ -9,7 +9,8 @@
 source ~/cos_ws/scripts/elfin_env.sh
 ```
 
-它做三件事: source foxy → source `elfin_ws/install/setup.bash` → `export ROS_LOCALHOST_ONLY=1`。
+当前入口依次加载 Humble、`.build/vendor/install/setup.bash`、`.build/apps/install/setup.bash`，
+并设置 `ROS_LOCALHOST_ONLY=1`。历史排查的 Foxy 环境仅作为背景记录。
 第三项必须和 `start_real.py` / `start_sim.py` 里的设置一致, 否则看不到它们启动的节点。
 
 需要 root 身份调试时:
