@@ -100,7 +100,7 @@ class HeightmapBuilderNode(Node):
         self.declare_parameter('z_max', 0.3)
         self.declare_parameter('resolution', 0.01)
         self.declare_parameter('output_dir',
-                               '/home/fit/elfin5_ctl/cos_ws/app_ws/generated')
+                               os.path.join(os.environ.get('ELFIN5_OUTPUT_DIR', 'outputs'), 'realsense'))
 
         p = lambda n: self.get_parameter(n).value
         self.target_frame = p('target_frame')

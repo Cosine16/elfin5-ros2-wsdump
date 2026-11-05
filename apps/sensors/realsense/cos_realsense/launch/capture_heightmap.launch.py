@@ -38,7 +38,7 @@ def generate_launch_description():
         DeclareLaunchArgument('z_min', default_value='-0.6'),
         DeclareLaunchArgument('z_max', default_value='0.3'),
         DeclareLaunchArgument('output_dir',
-                              default_value='/home/fit/elfin5_ctl/cos_ws/app_ws/generated'),
+                              default_value=os.path.join(os.environ.get('ELFIN5_OUTPUT_DIR', 'outputs'), 'realsense')),
     ]
 
     real_camera = IncludeLaunchDescription(

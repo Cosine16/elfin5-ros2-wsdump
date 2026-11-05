@@ -5,6 +5,8 @@ Run after capture_heightmap.launch.py has produced a world file:
   ros2 launch cos_realsense view_heightmap.launch.py world:=/path/to/heightmap.world
 """
 
+import os
+
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
@@ -24,6 +26,6 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'world',
-            default_value='/home/fit/elfin5_ctl/cos_ws/app_ws/generated/heightmap.world'),
+            default_value=os.path.join(os.environ.get('ELFIN5_OUTPUT_DIR', 'outputs'), 'realsense', 'heightmap.world')),
         gazebo,
     ])
