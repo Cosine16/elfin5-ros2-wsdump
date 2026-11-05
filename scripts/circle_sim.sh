@@ -18,23 +18,24 @@
 # 否则从零位直接 enable 会因目标姿态不可达而失败。
 #
 # 环境变量:
-#   SIM_WS=<path>   覆盖工作空间路径（默认 ~/cos_ws/app_ws，overlay 已串接 elfin_ws）
+#   SIM_WS=<path>   覆盖工作空间路径（默认 <repo>/.build/apps，overlay 已串接 .build/vendor）
 # =====================================================================
 set -euo pipefail
 
 export ROS_LOCALHOST_ONLY=1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WS="${SIM_WS:-$HOME/cos_ws/app_ws}"
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+WS="${SIM_WS:-${APP_BUILD_DIR:-$REPO_ROOT/.build/apps}}"
 SETUP="$WS/install/setup.bash"
 
 if [ ! -f "$SETUP" ]; then
   echo "错误: 找不到 $SETUP" >&2
-  echo "请先构建工作空间: cd $WS && ./build_all.sh" >&2
+  echo "请先构建工作空间: bash $REPO_ROOT/scripts/build_apps.sh" >&2
   exit 1
 fi
 if [ ! -d "$WS/install/cos_shape" ]; then
-  echo "错误: cos_shape 未构建，请先: cd $WS && ./build_all.sh" >&2
+  echo "错误: cos_shape 未构建，请先: bash $REPO_ROOT/scripts/build_apps.sh" >&2
   exit 1
 fi
 

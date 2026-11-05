@@ -5,7 +5,7 @@ start_sim.py
 ============
 根据 README_cn.md 中的仿真章节命令，自动打开多个终端窗口，
 并在每个终端中依次执行:
-    1. source ~/cos_ws/app_ws/install/setup.bash  (overlay, 自动串接 elfin_ws)
+    1. source ~/cos_ws/.build/apps/install/setup.bash  (overlay, 自动串接 .build/vendor)
     2. sudo + ros2 launch <仿真命令>
 
 支持机型(前缀): elfin3 / elfin5 / elfin5_l / elfin10 / elfin10_l / elfin15
@@ -15,7 +15,7 @@ start_sim.py
     python3 start_sim.py --no-sudo            # 不使用 sudo
     python3 start_sim.py --elfin elfin5       # 启动 Elfin5 仿真
     python3 start_sim.py --list               # 只打印将要执行的命令, 不启动终端
-    python3 start_sim.py --workspace ~/cos_ws/app_ws   # 指定工作空间路径
+    python3 start_sim.py --workspace ~/cos_ws/.build/apps   # 指定工作空间路径
 
 注意:
     - 使用 sudo 时, 每个终端会提示输入密码, 请在对应终端中手动输入。
@@ -32,12 +32,10 @@ import sys
 # ---------------------------------------------------------------------------
 # 可配置项
 # ---------------------------------------------------------------------------
-CATKIN_WS = os.path.expanduser("~/cos_ws/app_ws")  # 自研 overlay 工作空间(可被 --workspace 覆盖)
+CATKIN_WS = os.environ.get("APP_BUILD_DIR", os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".build", "apps"))
 SETUP_SCRIPT = os.path.join(CATKIN_WS, "install", "setup.bash")
 
-# 仿真时每个终端要启动的命令。
-# 键为机型前缀, 值为 (终端标题, "ros2 launch 后面的参数") 列表。
-# 内容来自 README_cn.md 的 "使用仿真模型" 章节。
 SIM_COMMANDS = {
     "elfin3": [
         ("Gazebo + MoveIt (RViz)", "elfin3_ros2_moveit2 elfin3.launch.py"),
@@ -159,7 +157,7 @@ def main():
     parser.add_argument("--list", action="store_true",
                         help="只打印将要执行的命令, 不启动终端")
     parser.add_argument("--workspace", default=CATKIN_WS,
-                        help="工作空间路径, 默认 ~/cos_ws/app_ws")
+                        help="工作空间路径, 默认 <repo>/.build/apps")
     args = parser.parse_args()
 
     CATKIN_WS = os.path.expanduser(args.workspace)

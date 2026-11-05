@@ -16,7 +16,7 @@
 #
 # 环境变量:
 #   SIM_SUDO=1      以 `sudo -E` 执行仿真命令（默认不用 sudo；已是 root 自动忽略）
-#   SIM_WS=<path>   覆盖工作空间路径（默认 ~/cos_ws/app_ws，overlay 已串接 elfin_ws）
+#   SIM_WS=<path>   覆盖工作空间路径（默认 <repo>/.build/apps，overlay 已串接 .build/vendor）
 # =====================================================================
 set -euo pipefail
 
@@ -25,7 +25,8 @@ set -euo pipefail
 # gnome-terminal 以 bash -c 非交互方式运行（不读 ~/.bashrc），必须在这里导出。
 export ROS_LOCALHOST_ONLY=1
 
-WS="${SIM_WS:-$HOME/cos_ws/app_ws}"
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+WS="${SIM_WS:-${APP_BUILD_DIR:-$REPO_ROOT/.build/apps}}"
 SETUP="$WS/install/setup.bash"
 LOG_DIR="$WS/log/sim"
 
@@ -37,7 +38,7 @@ SUDO=""
 need_setup() {
   if [ ! -f "$SETUP" ]; then
     echo "错误: 找不到 $SETUP" >&2
-    echo "请先构建工作空间: cd $WS && ./build_all.sh" >&2
+    echo "请先构建工作空间: bash $REPO_ROOT/scripts/build_apps.sh" >&2
     exit 1
   fi
 }
@@ -145,7 +146,7 @@ case "${1:-}" in
 
 环境变量:
   SIM_SUDO=1      以 sudo -E 执行仿真命令（默认不用）
-  SIM_WS=<path>   覆盖工作空间路径（默认 ~/cos_ws/app_ws，overlay 已串接 elfin_ws）
+  SIM_WS=<path>   覆盖工作空间路径（默认 <repo>/.build/apps，overlay 已串接 .build/vendor）
 HELP
     ;;
 esac

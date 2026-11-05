@@ -12,9 +12,9 @@
 步骤 2/3/4 通过 Gate 同步: 在各自终端里轮询等待上游的 service/node 出现
 (见 wait_for_ros.sh), 因此终端可以任意时刻手动重启, 不必按顺序重开全部。
 
-环境层: 每个终端按 humble -> elfin_ws -> app_ws 的顺序显式 source 三层
-setup.bash。不依赖 app_ws 构建时的"自动串接" —— 串接关系是构建时刻的快照,
-app_ws 一旦脱离 elfin_ws 单独构建, 其 setup.bash 就断了驱动层, 终端启动即
+环境层: 每个终端按 humble -> .build/vendor -> .build/apps 的顺序显式 source 三层
+setup.bash。不依赖 .build/apps 构建时的"自动串接" —— 串接关系是构建时刻的快照,
+.build/apps 一旦脱离 .build/vendor 单独构建, 其 setup.bash 就断了驱动层, 终端启动即
 'Package not found'。显式 source 让运行期环境不依赖构建历史。
 
 用户模型: 默认全程以当前用户运行。硬件终端经 `sudo capsh` 持有
@@ -49,16 +49,17 @@ from dataclasses import dataclass
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(SCRIPT_DIR)                      # cos_ws/
-APP_WS = os.path.join(REPO_ROOT, "app_ws")                   # 自研 overlay
-DRIVER_WS = os.path.join(REPO_ROOT, "elfin_ws")              # 厂家驱动 underlay
+APP_WS = os.environ.get("APP_BUILD_DIR", os.path.join(REPO_ROOT, ".build", "apps"))
+DRIVER_WS = os.environ.get("VENDOR_BUILD_DIR", os.path.join(REPO_ROOT, ".build", "vendor"))
+VENDOR_SRC = os.path.join(REPO_ROOT, "third_party", "elfin_robot_ros2")
 BRINGUP_CONFIG = os.path.join(
-    DRIVER_WS, "src", "elfin_robot", "elfin_robot_bringup", "config"
+    VENDOR_SRC, "elfin_robot_bringup", "config"
 )
 WAIT_HELPER = os.path.join(SCRIPT_DIR, "wait_for_ros.sh")
 
-# 终端内按 humble -> elfin_ws -> app_ws 顺序显式 source (后者覆盖前者,
+# 终端内按 humble -> .build/vendor -> .build/apps 顺序显式 source (后者覆盖前者,
 # 见模块 docstring 环境层); env_prelude() 直接使用这三个路径
-HUMBLE_SETUP = "/opt/ros/humble/setup.bash"
+HUMBLE_SETUP = os.environ.get("ROS_SETUP", "/opt/ros/humble/setup.bash")
 DRIVER_SETUP = os.path.join(DRIVER_WS, "install", "setup.bash")
 APP_SETUP = os.path.join(APP_WS, "install", "setup.bash")
 
@@ -238,9 +239,9 @@ def interface_is_up(name: str) -> bool:
 
 
 def check_workspace_chain() -> tuple[bool, list[str]]:
-    """动态校验: 实际按 humble->elfin_ws->app_ws 链 source 一遍, 驱动包可解析。
+    """动态校验: 实际按 humble->.build/vendor->.build/apps 链 source 一遍, 驱动包可解析。
 
-    静态文件检查之外的保险 —— app_ws 若脱离 elfin_ws 构建, 其 setup.bash
+    静态文件检查之外的保险 —— .build/apps 若脱离 .build/vendor 构建, 其 setup.bash
     不含驱动层, 只查文件存在性是发现不了的, 终端启动才报 'Package not found'。
     返回 (是否齐全, 缺失包列表)。
     """
@@ -266,11 +267,11 @@ def check_environment() -> bool:
 
     report(os.path.isfile(DRIVER_SETUP),
            f"厂家驱动 setup: {DRIVER_SETUP}" if os.path.isfile(DRIVER_SETUP)
-           else f"未找到 {DRIVER_SETUP}, 请先构建 elfin_ws/ (build_all.sh)")
+           else f"未找到 {DRIVER_SETUP}, 请先运行 bash scripts/build_vendor.sh")
 
     report(os.path.isfile(APP_SETUP),
            f"应用层 setup: {APP_SETUP}" if os.path.isfile(APP_SETUP)
-           else f"未找到 {APP_SETUP}, 请先构建 app_ws/ (build_all.sh)")
+           else f"未找到 {APP_SETUP}, 请先运行 bash scripts/build_apps.sh")
 
     drivers_yaml = os.path.join(BRINGUP_CONFIG, "elfin_drivers.yaml")
     report(os.path.isfile(drivers_yaml),
@@ -333,7 +334,7 @@ def main() -> None:
     parser.add_argument("--list", action="store_true",
                         help="只打印将要执行的命令, 不启动终端")
     parser.add_argument("--workspace", default=APP_WS,
-                        help="overlay 工作空间路径, 默认 <repo>/app_ws")
+                        help="overlay 工作空间路径, 默认 <repo>/.build/apps")
     parser.add_argument("--wait-timeout", type=int, default=120,
                         help="每步等待上游就绪的超时秒数, 默认 120")
     parser.add_argument("--no-wait", action="store_true",
