@@ -1,0 +1,2 @@
+# Unified diffs contain whitespace-significant blank context lines.
+third_party/patches/elfin_robot_ros2/*.patch -whitespace

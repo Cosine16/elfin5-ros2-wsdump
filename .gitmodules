@@ -1,4 +1,3 @@
 [submodule "elfin_ws/src/elfin_robot"]
-	path = elfin_ws/src/elfin_robot
+	path = third_party/elfin_robot_ros2
 	url = git@github.com:Cosine16/elfin_robot_ros2.git
-	branch = humble-station
