@@ -34,7 +34,7 @@ ros2 action send_goal /elfin_arm_controller/follow_joint_trajectory \
 ### 启动
 
 ```sh
-source ~/cos_ws/app_ws/install/setup.bash
+source ~/cos_ws/.build/apps/install/setup.bash
 ros2 launch cos_shape circle_motion.launch.py          # 默认参数，等待 enable
 # 或完全自定义：
 ros2 run cos_shape circle_motion --ros-args \
@@ -89,7 +89,7 @@ ros2 topic echo /circle_motion/state
 容器内一次性 `ros2 topic pub` 偶发丢包，推荐使用长驻的图形面板调参：
 
 ```sh
-source ~/cos_ws/app_ws/install/setup.bash
+source ~/cos_ws/.build/apps/install/setup.bash
 ros2 run cos_shape circle_panel.py
 ```
 
