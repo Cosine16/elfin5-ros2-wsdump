@@ -37,9 +37,10 @@ Elfin 机械臂 ROS2 控制接口示例包，移植自官方资料 `ros_demo.zip
 ## 编译
 
 ```bash
-cd ~/cos_ws/elfin_ws
-colcon build --packages-select elfin_demo --symlink-install
-source install/setup.bash
+cd /path/to/ctl-elfin5
+bash scripts/build_vendor.sh
+bash scripts/build_apps.sh --packages-select elfin_demo
+source scripts/elfin_env.sh
 ```
 
 ## 跑仿真
@@ -49,11 +50,11 @@ source install/setup.bash
 ~/cos_ws/scripts/start_sim.sh moveit2
 
 # 终端 2：basic_api（/joint_goal /cart_goal /cart_path_goal /stop_teleop 的提供方）
-source ~/cos_ws/elfin_ws/install/setup.bash
+source ~/cos_ws/scripts/elfin_env.sh
 ros2 launch elfin5_ros2_moveit2 elfin5_basic_api.launch.py
 
 # 终端 3：跑示例（仿真无需使能）
-source ~/cos_ws/elfin_ws/install/setup.bash
+source ~/cos_ws/scripts/elfin_env.sh
 ros2 run elfin_demo joint_goal_demo.py
 ros2 run elfin_demo cart_goal_demo.py
 ros2 run elfin_demo cart_path_goal_demo.py
@@ -73,7 +74,7 @@ python3 ~/cos_ws/scripts/start_real.py
 
 # 终端 5：先清错，再使能，确认状态
 export ROS_LOCALHOST_ONLY=1   # 与 start_real 的终端保持一致
-source ~/cos_ws/elfin_ws/install/setup.bash
+source ~/cos_ws/scripts/elfin_env.sh
 ros2 service call /clear_fault std_srvs/srv/SetBool "{data: true}"
 ros2 run elfin_demo elfin_enable_demo.py     # 应返回 "robot is enable"
 ros2 run elfin_demo get_enable_state.py      # 应打印 robot enable
