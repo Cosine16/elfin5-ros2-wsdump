@@ -1,7 +1,23 @@
-# clangd 配置:指向 elfin_ws 合并后的编译数据库(compile_commands.json)
-# 由 elfin_ws/build/*/compile_commands.json 合并生成,覆盖厂家驱动层的 C++ 包
-# (elfin_basic_api / elfin_ethercat_driver / soem_ros2 / elfin_ros_control 等),
-# 这样 clangd 能自动解析出 rclcpp / moveit 等所有 include 路径与编译选项。
-# 自研包(cos_shape / cos_rsvisual)已移至 app_ws/,由 app_ws/.clangd 单独覆盖。
+# Vendor compilation databases; application overrides are in apps/.clangd.
 CompileFlags:
-  CompilationDatabase: /home/fit/cos_ws/elfin_ws/build
+  CompilationDatabase: .build/vendor/build
+---
+If:
+  PathMatch: third_party/elfin_robot_ros2/elfin_basic_api/.*
+CompileFlags:
+  CompilationDatabase: .build/vendor/build/elfin_basic_api
+---
+If:
+  PathMatch: third_party/elfin_robot_ros2/elfin_ethercat_driver/.*
+CompileFlags:
+  CompilationDatabase: .build/vendor/build/elfin_ethercat_driver
+---
+If:
+  PathMatch: third_party/elfin_robot_ros2/elfin_ros_control/.*
+CompileFlags:
+  CompilationDatabase: .build/vendor/build/elfin_ros_control
+---
+If:
+  PathMatch: third_party/elfin_robot_ros2/soem_ros2/.*
+CompileFlags:
+  CompilationDatabase: .build/vendor/build/soem_ros2

@@ -17,8 +17,8 @@
             "connect": { "host": "127.0.0.1", "port": 5678 },
             "pathMappings": [
                 {
-                    "localRoot": "${workspaceFolder}/elfin_ws/src/elfin_robot/elfin_basic_api/scripts",
-                    "remoteRoot": "/home/fit/cos_ws/elfin_ws/install/elfin_basic_api/lib/elfin_basic_api"
+                    "localRoot": "${workspaceFolder}/third_party/elfin_robot_ros2/elfin_basic_api/scripts",
+                    "remoteRoot": "${workspaceFolder}/.build/vendor/install/elfin_basic_api/lib/elfin_basic_api"
                 }
             ],
             "justMyCode": false
@@ -28,7 +28,7 @@
             "name": "attach: elfin_basic_api (c++)",
             "type": "cppdbg",
             "request": "attach",
-            "program": "/home/fit/cos_ws/elfin_ws/install/elfin_basic_api/lib/elfin_basic_api/elfin_basic_api_node",
+            "program": "${workspaceFolder}/.build/vendor/install/elfin_basic_api/lib/elfin_basic_api/elfin_basic_api_node",
             "processId": "${command:pickProcess}",
             "MIMode": "gdb",
             "setupCommands": [

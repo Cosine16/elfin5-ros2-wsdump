@@ -1,0 +1,13 @@
+# Each C++ package uses its own generated compilation database.
+CompileFlags:
+  CompilationDatabase: ../.build/apps/build
+---
+If:
+  PathMatch: workflows/drawing/cos_shape/.*
+CompileFlags:
+  CompilationDatabase: ../.build/apps/build/cos_shape
+---
+If:
+  PathMatch: workflows/visual_following/cos_rsvisual/.*
+CompileFlags:
+  CompilationDatabase: ../.build/apps/build/cos_rsvisual

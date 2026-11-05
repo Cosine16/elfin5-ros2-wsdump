@@ -22,13 +22,19 @@
         },
         {
             // 只重编硬件相关的 3 个包;构建后必须重启硬件 launch 才会加载新 .so。
-            // 末尾顺手重新合并 compile_commands.json,保持 clangd 数据库最新。
+            // clangd 按包读取 .build/vendor/build 下的编译数据库。
             "label": "build: ethercat debug (RelWithDebInfo)",
             "type": "shell",
             "command": "bash",
             "args": [
-                "-c",
-                "unset AMENT_PREFIX_PATH COLCON_PREFIX_PATH CMAKE_PREFIX_PATH ROS_PACKAGE_PATH PYTHONPATH LD_LIBRARY_PATH; source /opt/ros/humble/setup.bash && cd /home/fit/cos_ws/elfin_ws && colcon build --packages-select elfin_ethercat_driver elfin_ros_control soem_ros2 --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && python3 -c \"import json,glob; m=[]; [m.extend(json.load(open(p))) for p in glob.glob('build/*/compile_commands.json')]; json.dump(m, open('build/compile_commands.json','w'), indent=1)\""
+                "${workspaceFolder}/scripts/build_vendor.sh",
+                "--packages-select",
+                "elfin_ethercat_driver",
+                "elfin_ros_control",
+                "soem_ros2",
+                "--cmake-args",
+                "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+                "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
             ],
             "group": "build",
             "problemMatcher": []
@@ -41,7 +47,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "sudo chrt 10 bash -c 'source /opt/ros/humble/setup.bash && source /home/fit/cos_ws/elfin_ws/install/setup.bash && exec ros2 launch elfin5_ros2_moveit2 elfin5_moveit.launch.py'"
+                "sudo chrt 10 bash -c 'source /opt/ros/humble/setup.bash && source \"${workspaceFolder}/.build/vendor/install/setup.bash\" && exec ros2 launch elfin5_ros2_moveit2 elfin5_moveit.launch.py'"
             ],
             "problemMatcher": []
         }
