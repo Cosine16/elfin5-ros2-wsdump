@@ -4,7 +4,7 @@
 
 - 源码位置：[elfin_robot_ros2](elfin_robot_ros2/)，Git 子模块。
 - 厂家来源：`huayan-robotics/elfin_robot_ros2`，依据 fork 的 [STATION.md](elfin_robot_ros2/STATION.md)。
-- 引入 fork：`git@github.com:Cosine16/elfin_robot_ros2.git`。
+- 引入 fork：`https://github.com/Cosine16/elfin_robot_ros2.git`，便于本地与 CI 匿名克隆公开源码。
 - 本次保留提交：`23b89ab5ace051e770d4a5463afae2325d083752`。
 - 当前本地分支：`feat/gz-harmonic-migration`；迁移未切换、合并或拉取分支。
 - 记录的厂家基线：`humble_ethercat@1381e3f6d404eaf3311cae4311641e4d8f369b1a`。
@@ -15,7 +15,7 @@
 Git 子模块的逻辑标识仍保留原名 `elfin_ws/src/elfin_robot`，实际路径已更新；
 这是为保留现有本地 Git 元数据，新的检出仍按新路径初始化。
 
-本次检查使用本地历史，未联网核验远端引用，也未推送或创建 fork 提交。
+本次已通过公开 HTTPS 核验远端分支与固定提交一致，未推送或创建新的 fork 提交。
 
 ## 历史改动边界
 

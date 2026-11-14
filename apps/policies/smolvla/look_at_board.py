@@ -8,6 +8,7 @@ import threading
 import numpy as np
 import rclpy
 from rclpy.action import ActionClient
+from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.duration import Duration
 from rclpy.time import Time
@@ -40,7 +41,10 @@ class LookAtBoard(Node):
         self.listener = TransformListener(self.tf, self)
         self.ik = self.create_client(GetPositionIK, '/compute_ik')
         self.move = ActionClient(self, MoveGroup, '/move_action')
-        threading.Thread(target=rclpy.spin, args=(self,), daemon=True).start()
+        self.spin_executor = SingleThreadedExecutor()
+        self.spin_executor.add_node(self)
+        self.spin_thread = threading.Thread(target=self.spin_executor.spin, daemon=True)
+        self.spin_thread.start()
 
     def result(self, future, timeout=60):
         import time
@@ -111,6 +115,8 @@ def main():
     try:
         node.run()
     finally:
+        node.spin_executor.shutdown()
+        node.spin_thread.join()
         node.destroy_node()
         rclpy.shutdown()
 

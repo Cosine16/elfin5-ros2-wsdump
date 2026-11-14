@@ -30,6 +30,8 @@ cd /home/nanoctl/project/ctl-elfin5
 bash apps/policies/smolvla/run_gz_sim.sh
 ```
 
+该入口调用共享的 [run_handeye.sh](../../../scripts/run_handeye.sh) 的 `launch` 命令。若提示缺少 ROS 2 Humble underlay，先安装 Humble，或通过 `ROS_SETUP=/实际路径/setup.bash` 指定已有环境；若提示缺少手眼工作区的 setup，则先执行 `bash scripts/build_handeye.sh`。这两种情况会在启动 Gazebo 前退出。
+
 - headless 运行，默认 `ROS_DOMAIN_ID=85`（与真机默认域 0 隔离）。
 - 就绪标志：`/camera/color/image_raw`（640×480 rgb8）、`/joint_states`、
   `/elfin_arm_controller/joint_trajectory` 等 topic 出现。
