@@ -1,4 +1,5 @@
 from glob import glob
+from os.path import isfile
 from setuptools import setup
 
 package_name = 'elfin5_handeye'
@@ -7,7 +8,8 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        *[('share/' + package_name + '/' + folder, glob(folder + '/*'))
+        *[('share/' + package_name + '/' + folder,
+           [path for path in glob(folder + '/*') if isfile(path)])
           for folder in ('launch', 'urdf', 'config', 'worlds')],
     ],
     install_requires=['setuptools'], zip_safe=True,

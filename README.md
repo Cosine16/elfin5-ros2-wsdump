@@ -17,6 +17,7 @@
 │   └── bringup/             公共启动与场景配置的归属位置
 ├── third_party/             厂家 fork、外部 SDK 和参考项目
 │   ├── elfin_robot_ros2/    固定提交的厂家 fork 子模块
+│   ├── RoboNeuron/          固定提交的 RoboNeuron 适配 fork 子模块
 │   └── patches/            主仓库记录的集成构建补丁
 ├── scripts/                 构建、启动与诊断入口
 ├── document/                使用说明与架构文档
@@ -48,6 +49,14 @@ source scripts/elfin_env.sh
 厂家构建仅扫描 `third_party/elfin_robot_ros2/`，输出到 `.build/vendor/`，并检查、
 应用版本化的 CMake 集成补丁；详细版本、补丁和验证边界见
 [厂家 fork 说明](third_party/elfin_robot_ros2.md)。
+
+VS Code 的 [.vscode/settings.json](.vscode/settings.json) 已将 vendor 生成的
+`elfin_robot_msgs` Python 安装目录加入补全和 Pylance 搜索路径，需先完成 vendor
+构建。若构建后仍提示无法解析 `elfin_robot_msgs.srv`，执行
+`Python: Restart Language Server`。这些设置只影响编辑器；运行脚本仍需在对应终端
+加载 ROS 环境。仅使用 vendor 时，Bash 执行
+`source .build/vendor/install/setup.bash`，zsh 使用 `setup.zsh`；
+Classic / 真机应用使用上面的 `scripts/elfin_env.sh` 或 `scripts/elfin_env.zsh`。
 
 Humble / Gazebo Harmonic 的相机仿真与标定：
 
@@ -87,6 +96,8 @@ bash scripts/circle_sim.sh
   当前仓库的 `apps/bridges/mcp/run_server.sh` 绝对路径。
 - [SmolVLA](apps/policies/smolvla/README.md)：独立模型依赖，复用 Harmonic 仿真入口。
   模型尚未在 Elfin5 上微调，当前用于链路验证。
+- RoboNeuron 启动脚本支持 `ROS_SETUP` 和 `ROS_DISTRO`；本机可显式使用
+  `ROS_SETUP=/opt/ros/humble/setup.bash`，无需修改 Jazzy 示例中的核心代码。
 - Windows TCP SDK 示例位于 [third_party/windows_sdk](third_party/windows_sdk/)，不参与 colcon 构建。
 
 ## 文档
@@ -96,6 +107,20 @@ bash scripts/circle_sim.sh
 - [架构与数据流](document/架构与数据流.md)
 - [已知问题](document/已知问题.md)
 - [厂家 ROS 说明](document/README_cn.md)
+
+## Humble / Harmonic 仿真 smoke
+
+完成 `bash scripts/build_handeye.sh` 后，可运行以下集成检查。脚本自行启动和清理
+headless 仿真，检查六个关节状态、D435i RGB 图像和 `FollowJointTrajectory` action：
+
+```bash
+bash scripts/test_handeye_sim.sh
+```
+
+日志和结构化结果写入 `outputs/handeye/sim-smoke/`。同一入口由
+`.github/workflows/humble-harmonic-sim.yml` 在 `main`、`feat/**` 分支推送、发往
+`main` 的 PR 及手动触发时执行；CI 使用 Xvfb 提供无显示器的软件渲染环境，不运行
+SmolVLA GPU 推理。
 
 ## 不依赖 ROS 的迁移检查
 
