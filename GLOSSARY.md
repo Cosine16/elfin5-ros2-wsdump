@@ -22,7 +22,7 @@
 
 ## 直接执行路径
 
-RoboNeuron 的 Direct Path：Agent 的工具调用经校验后直接映射为机器人侧执行，不经过 VLA 推理。首期三款设备都以该路径完成统一接入演示；“直接”不表示 AgentArts 与机器人直接建立 ROS 2 网络连接。
+RoboNeuron 的 Direct Path：Agent 的工具调用经校验后直接映射为机器人侧执行，不经过 VLA 推理。规划中，首期三款设备将以该路径完成统一接入演示；“直接”不表示 AgentArts 与机器人直接建立 ROS 2 网络连接。
 
 ## Elfin5 VLA 闭环
 
