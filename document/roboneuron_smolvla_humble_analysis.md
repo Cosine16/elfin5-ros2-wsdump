@@ -62,12 +62,11 @@ RoboNeuron 的 ROS 接口是纯 `rosidl` 消息包，`CMakeLists.txt` 只生成�
 
 ### 3.2 Python：需要 Humble 兼容分支，而非混用解释器
 
-当前 `pyproject.toml` 强制 `>=3.12,<3.13`，而 Humble 系统 Python 是 3.10：
+当前固定提交的 `pyproject.toml` 已声明 `>=3.10,<3.13`，并非强制 Python 3.12：
 
 - `third_party/RoboNeuron/pyproject.toml:6`
-- `third_party/RoboNeuron/README.md:103-110,231-236`
 
-虽然源码通过 Python 3.10 语法编译，但这不等于依赖解析和测试已经通过。应在自有 RoboNeuron fork 中建立 `humble-smolvla` 分支，调整 Python 3.10 元数据并重新生成锁文件、运行单元测试；不要仅删除版本限制后就宣称兼容。
+因此无需为 Python 3.10 重新补元数据；仍需单独验证依赖解析、ROS 导入和测试，不能仅凭元数据宣称完整兼容。
 
 推荐环境拆分：
 
